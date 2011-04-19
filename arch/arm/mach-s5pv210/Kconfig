@@ -173,6 +173,12 @@ config ARIES_LATONA
 	help
 	Select S1 LATONA
 
+config GALAXY_I897
+	bool "select Captivate"
+	depends on ARIES_EUR
+	help
+	Captivate specific settings
+
 config S5PV210_SETUP_FB
 	bool
 	depends on FB_S3C
