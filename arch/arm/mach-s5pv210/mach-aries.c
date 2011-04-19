@@ -1279,7 +1279,12 @@ static bool jack_mic_bias;
 static void set_shared_mic_bias(void)
 {
 #if !defined(CONFIG_ARIES_NTT)
+#if defined(CONFIG_GALAXY_I897)
+        gpio_set_value(GPIO_MICBIAS_EN, wm8994_mic_bias);
+        gpio_set_value(GPIO_EAR_MICBIAS_EN, jack_mic_bias);
+#else
 	gpio_set_value(GPIO_MICBIAS_EN, wm8994_mic_bias || jack_mic_bias);
+#endif
 #else
 	gpio_set_value(GPIO_MICBIAS_EN, wm8994_mic_bias);
 	gpio_set_value(GPIO_SUB_MICBIAS_EN, jack_mic_bias);
@@ -2637,6 +2642,26 @@ static struct sec_jack_zone sec_jack_zones[] = {
 		.check_count = 20,
 		.jack_type = SEC_HEADSET_3POLE,
 	},
+#if defined(CONFIG_GALAXY_I897) //cappy is 700 to 2500
+        {
+                /* 0 < adc <= 700, unstable zone, default to 3pole if it stays
+                 * in this range for 800ms (10ms delays, 80 samples)
+                 */
+                .adc_high = 700,
+                .delay_ms = 10,
+                .check_count = 80,
+                .jack_type = SEC_HEADSET_3POLE,
+        },
+        {
+                /* 700 < adc <= 2500, unstable zone, default to 4pole if it
+                 * stays in this range for 800ms (10ms delays, 80 samples)
+                 */
+                .adc_high = 2500,
+                .delay_ms = 10,
+                .check_count = 80,
+                .jack_type = SEC_HEADSET_4POLE,
+        },
+#else
 	{
 		/* 0 < adc <= 900, unstable zone, default to 3pole if it stays
 		 * in this range for 800ms (10ms delays, 80 samples)
@@ -2655,6 +2680,7 @@ static struct sec_jack_zone sec_jack_zones[] = {
 		.check_count = 80,
 		.jack_type = SEC_HEADSET_4POLE,
 	},
+#endif
 	{
 		/* 2000 < adc <= 3400, 4 pole zone, default to 4pole if it
 		 * stays in this range for 100ms (10ms delays, 10 samples)
@@ -2758,7 +2784,11 @@ struct sec_jack_platform_data sec_jack_pdata = {
 	.buttons_zones = sec_jack_buttons_zones,
 	.num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones),
 	.det_gpio = GPIO_DET_35,
+#if defined(CONFIG_GALAXY_I897)
+	.send_end_gpio = GPIO_KBC2,
+#else
 	.send_end_gpio = GPIO_EAR_SEND_END,
+#endif
 };
 
 static struct platform_device sec_device_jack = {
@@ -3346,6 +3376,9 @@ static void __init sound_init(void)
 
 #if !defined(CONFIG_ARIES_NTT)
 	gpio_request(GPIO_MICBIAS_EN, "micbias_enable");
+#if defined(CONFIG_GALAXY_I897)
+	gpio_request(GPIO_EAR_MICBIAS_EN, "ear_micbias_enable");
+#endif
 #else
 	gpio_request(GPIO_MICBIAS_EN, "micbias_enable");
 	gpio_request(GPIO_SUB_MICBIAS_EN, "sub_micbias_enable");
