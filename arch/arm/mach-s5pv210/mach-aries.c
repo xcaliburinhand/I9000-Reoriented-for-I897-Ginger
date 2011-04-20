@@ -1197,6 +1197,12 @@ static void touch_keypad_onoff(int onoff)
 }
 
 static const int touch_keypad_code[] = {
+#if defined(CONFIG_GALAXY_I897)
+	KEY_MENU,
+	KEY_HOME,
+	KEY_BACK,
+	KEY_SEARCH,
+#else
 	KEY_MENU,
 	KEY_BACK,
 	KEY_LEFT,
@@ -1205,6 +1211,7 @@ static const int touch_keypad_code[] = {
 	KEY_DOWN,
 	KEY_CAMERA,
 	KEY_SEND,	
+#endif
 };
 
 static struct touchkey_platform_data touchkey_data = {
