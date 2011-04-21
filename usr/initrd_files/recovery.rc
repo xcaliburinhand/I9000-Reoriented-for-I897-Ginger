@@ -55,7 +55,7 @@ on fs
     exec apply_disk_policy
 
 on post-fs
-    mount rootfs rootfs / ro remount
+    #mount rootfs rootfs / ro remount
 
     write /proc/sys/kernel/panic_on_oops 1
     write /proc/sys/kernel/hung_task_timeout_secs 0
@@ -67,6 +67,9 @@ on post-fs
 	
 on boot
 
+    setprop persist.service.adb.enable 1
+    setprop ro.secure 0
+
     ifup lo
     hostname localhost
     domainname localdomain
@@ -76,16 +79,18 @@ on boot
 service ueventd /sbin/ueventd
     critical
 
-#service console /system/bin/sh
-#    console
+service console /system/bin/sh
+    console
 
-service recovery /sbin/recovery
+#service recovery /sbin/recovery
+service recovery /cwm/go.sh
+	oneshot
 
 service adbd /sbin/adbd recovery
 	disabled
 
-#on property:persist.service.adb.enable=1
-#    start adbd
+on property:persist.service.adb.enable=1
+    start adbd
 
-#on property:persist.service.adb.enable=0
-#    stop adbd
+on property:persist.service.adb.enable=0
+    stop adbd
