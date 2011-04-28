@@ -32,7 +32,7 @@ extern struct snd_soc_dai wm8994_dai;
 #define WM8994_SYSCLK_MCLK     1
 #define WM8994_SYSCLK_FLL      2
 
-#define AUDIO_COMMON_DEBUG	1
+#define AUDIO_COMMON_DEBUG	0
 
 /* For VT call */
 #define USE_INFINIEON_EC_FOR_VT
