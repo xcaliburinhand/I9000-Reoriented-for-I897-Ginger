@@ -634,11 +634,6 @@ service pvrsrvinit /system/bin/pvrsrvinit
     group root
     oneshot
 
-service wpa_supplicant /system/bin/wpa_supplicant -Dwext -ieth0 -c/data/misc/wifi/wpa_supplicant.conf
-    socket wpa_eth0 dgram 0660 wifi wifi
-    disabled
-    oneshot
-
 #for WiFi MFG(TestMode)
 service mfgloader /system/bin/mfgloader
     disabled
@@ -713,8 +708,13 @@ service samsungani /system/bin/bootanimation
     disabled
     oneshot
 
+service wpa_supplicant /system/bin/wpa_supplicant -Dwext -ieth0 -c/data/wifi/bcm_supp.conf
+    disabled
+    oneshot
+
 service playsound /system/bin/playsound
-    user root
+    user media
+    group system
     disabled
     oneshot
 
