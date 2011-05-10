@@ -47,8 +47,8 @@ on fs
     #mount rfs /dev/block/stl9 /system ro remount
 
     mkdir /data
-    #mount rfs /dev/block/mmcblk0p2 /data nosuid nodev check=no
-    mount rfs /dev/block/mmcblk0p2 /data nosuid nodev crypt check=no
+    mount rfs /dev/block/mmcblk0p2 /data nosuid nodev check=no
+    #mount rfs /dev/block/mmcblk0p2 /data nosuid nodev crypt check=no
     
     mount vfat /dev/block/mmcblk0p1 /sdcard 
     chown system system /data

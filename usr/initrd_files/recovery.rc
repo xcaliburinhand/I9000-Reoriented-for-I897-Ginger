@@ -79,14 +79,14 @@ on boot
 service ueventd /sbin/ueventd
     critical
 
-service console /system/bin/sh
-    console
 
-#service recovery /sbin/recovery
+
+
+#service recovery /voodoo/scripts/recovery_wrapper.sh
 service recovery /cwm/go.sh
 	oneshot
 
-service adbd /sbin/adbd recovery
+service adbd /voodoo/scripts/adbd_wrapper.sh recovery
 	disabled
 
 on property:persist.service.adb.enable=1
