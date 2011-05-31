@@ -490,7 +490,7 @@ static int sec_jack_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, hi);
 
-#if defined(CONFIG_GALAXY_I897)
+#if defined(CONFIG_GALAXY_I897) || defined(CONFIG_GALAXY_T959)
         pdata->det_active_high = 1;
 #endif
 

@@ -345,7 +345,7 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 			if (pdata->deskdock_cb)
 				pdata->deskdock_cb(FSA9480_ATTACHED);
 
-#if defined(CONFIG_GALAXY_I897)
+#if defined(CONFIG_GALAXY_I897) || defined(CONFIG_GALAXY_T959)
 			ret = i2c_smbus_write_byte_data(client,
                                         FSA9480_REG_MANSW1, SW_AUDIO);
                         if (ret < 0)
@@ -374,7 +374,6 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 		} else if (val2 & DEV_JIG_UART_ON) {
 			if (pdata->cardock_cb)
 				pdata->cardock_cb(FSA9480_ATTACHED);
-
                         ret = i2c_smbus_write_byte_data(client,
                                         FSA9480_REG_MANSW1, SW_AUDIO);
                         if (ret < 0)
