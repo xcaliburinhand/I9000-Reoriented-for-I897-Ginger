@@ -93,7 +93,7 @@ static const int8_t YAS529_TRANSFORMATION[][9] = {
 	{ -1, 0, 0, 0, 1, 0, 0, 0, -1 },
 };
 
-static const int supported_data_interval[] = {1, 20, 60, 200, 1000};
+static const int supported_data_interval[] = {10, 20, 60, 200, 1000};
 static const int supported_calib_interval[] = {10, 20, 60, 50, 50};
 static const int32_t INVALID_FINE_OFFSET[]
 				= {0x7fffffff, 0x7fffffff, 0x7fffffff};

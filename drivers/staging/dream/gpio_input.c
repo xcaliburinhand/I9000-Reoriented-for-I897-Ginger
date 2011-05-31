@@ -78,10 +78,10 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 		if (key_state->debounce & DEBOUNCE_UNSTABLE) {
 			debounce = key_state->debounce = DEBOUNCE_UNKNOWN;
 			enable_irq(gpio_to_irq(key_entry->gpio));
-			pr_info("gpio_keys_scan_keys: key %x-%x, %d "
+			/*pr_info("gpio_keys_scan_keys: key %x-%x, %d "
 				"(%d) continue debounce\n",
 				ds->info->type, key_entry->code,
-				i, key_entry->gpio);
+				i, key_entry->gpio);*/
 		}
 		npolarity = !(gpio_flags & GPIOEDF_ACTIVE_HIGH);
 		pressed = gpio_get_value(key_entry->gpio) ^ npolarity;

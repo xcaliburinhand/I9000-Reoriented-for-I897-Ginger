@@ -653,12 +653,15 @@ static void s3c_bat_discharge_reason(struct chg_data *chg)
 		chg->cable_status, chg->bat_info.charging_status, chg->bat_info.dis_reason);
 }
 
+extern int set_tsp_for_ta_detect(int state);
+
 static int s3c_cable_status_update(struct chg_data *chg)
 {
 	int ret;
 	bool vdc_status;
 	ktime_t ktime;
 	struct timespec cur_time;
+	static bool prev_vdc_status = 0;
 
 	/* if max8998 has detected vdcin */
 	if (max8998_check_vdcin(chg) == 1) {
@@ -720,6 +723,11 @@ update:
 		wake_lock(&chg->vbus_wake_lock);
 	else
 		wake_lock_timeout(&chg->vbus_wake_lock, HZ / 5);
+
+	if (vdc_status != prev_vdc_status) {
+		set_tsp_for_ta_detect(vdc_status);
+		prev_vdc_status = vdc_status;
+	}
 
 	return 0;
 err:

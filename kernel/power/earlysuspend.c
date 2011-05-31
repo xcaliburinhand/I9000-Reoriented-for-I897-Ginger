@@ -33,7 +33,7 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 extern struct wake_lock sync_wake_lock;
 extern struct workqueue_struct *sync_work_queue;
 
-#if defined(CONFIG_SND_S5P_RP) && defined(CONFIG_CPU_FREQ)
+#if defined(CONFIG_CPU_DIDLE) && defined(CONFIG_CPU_FREQ)
 #include <linux/cpufreq.h>
 #include <mach/cpu-freq-v210.h>
 extern volatile int s5p_rp_is_running;
@@ -123,7 +123,7 @@ static void early_suspend(struct work_struct *work)
 
 	queue_work(sync_work_queue, &sync_system_work);
 
-#if defined(CONFIG_SND_S5P_RP) && defined(CONFIG_CPU_FREQ)
+#if defined(CONFIG_CPU_DIDLE) && defined(CONFIG_CPU_FREQ)
 	if (s5p_rp_is_running) {
 		struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 		if (policy == NULL)
@@ -160,7 +160,7 @@ static void late_resume(struct work_struct *work)
 		goto abort;
 	}
 
-#if defined(CONFIG_SND_S5P_RP) && defined(CONFIG_CPU_FREQ)
+#if defined(CONFIG_CPU_DIDLE) && defined(CONFIG_CPU_FREQ)
 	if (dvfs_fixed_by_rp) {
 		struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 		if (policy == NULL)

@@ -108,6 +108,8 @@ struct s5p_rp_info {
 	int stop_after_eos;			/* State for Stop-after-EOS */
 	unsigned long error_info;		/* Error Information */
 	unsigned long gain;			/* Gain */
+	unsigned long gain_subl;		/* Gain sub left */
+	unsigned long gain_subr;		/* Gain sub right */
 	int dram_in_use;			/* DRAM is accessed by SRP */
 
 	int early_suspend_entered;		/* Early suspend state */
@@ -179,6 +181,7 @@ extern void s5p_i2s_change_lp_to_nr_continue(void);
 #endif
 
 static void s5p_rp_set_effect_apply(void);
+static void s5p_rp_set_gain_apply(void);
 
 int s5p_rp_get_op_level(void)
 {
@@ -227,7 +230,6 @@ static void s5p_rp_commbox_init(void)
 	writel(0x00000000, s5p_rp.commbox + RP_INTERRUPT);	/* Disable interrupt & wake up */
 
 	writel(0x00000000, s5p_rp.commbox + RP_FRAME_INDEX);	/* Clear Decoded Frame No. = 0 */
-	writel(s5p_rp.gain, s5p_rp.commbox + RP_GAIN_FACTOR);	/* Gain factor = 1.0 * (1<<24) */
 	writel(0x00000000, s5p_rp.commbox + RP_FRAME_SIZE);	/* Clear FRAME Size = 0 */
 
 	writel(0x00000000, s5p_rp.commbox + RP_EFFECT_DEF);	/* All Effect Off */
@@ -252,6 +254,7 @@ static void s5p_rp_commbox_init(void)
 	writel(0x00000000, s5p_rp.commbox + RP_READ_BITSTREAM_SIZE);
 
 	s5p_rp_set_effect_apply();				/* Set Sound Alive */
+	s5p_rp_set_gain_apply();
 }
 
 static void s5p_rp_commbox_deinit(void)
@@ -535,6 +538,18 @@ static void s5p_rp_effect_trigger(void)
 	writel(sw_def, s5p_rp.commbox + RP_SW_DEF);
 }
 
+static void s5p_rp_set_gain_apply(void)
+{
+	unsigned long gain;
+
+	gain = (((s5p_rp.gain * s5p_rp.gain_subl) / 100) & 0x01FFFC00) >> 10;
+	gain |= (((s5p_rp.gain * s5p_rp.gain_subr) / 100) & 0x01FFFC00) << 6;
+
+/*	printk(KERN_ERR "========== SRP GAIN register [%08lX] ============\n", gain);*/
+
+	writel(gain, s5p_rp.commbox + RP_GAIN_FACTOR);
+}
+
 #if 1	/* Test only */
 static void s5p_rp_set_effect_mode_test(int mode)
 {
@@ -705,7 +720,8 @@ static ssize_t s5p_rp_write(struct file *file, const char *buffer,
 		frame_idx = readl(s5p_rp.commbox + RP_FRAME_INDEX);
 		while(!s5p_rp.early_suspend_entered && s5p_rp_is_running) {
 				if (readl(s5p_rp.commbox + RP_READ_BITSTREAM_SIZE)
-					+ (s5p_rp.ibuf_size * 2) >= s5p_rp.wbuf_fill_size)
+				+ (s5p_rp.ibuf_size * 2) + 4096
+				>= s5p_rp.wbuf_fill_size)
 					break;
 				if (readl(s5p_rp.commbox + RP_FRAME_INDEX)
 					> frame_idx + 2)	/* long sleep? */
@@ -1132,9 +1148,23 @@ static int s5p_rp_ctrl_ioctl(struct inode *inode, struct file *file, unsigned in
 	case S5P_RP_CTRL_SET_GAIN:					/* Set Output Gain */
 		s5pdbg("CTRL: Gain\n");
 		s5p_rp.gain = arg;
-		if (s5p_rp_is_opened) {		/* Volume control */
-			writel(s5p_rp.gain, s5p_rp.commbox + RP_GAIN_FACTOR);	/* Gain factor = 1.0 * (1<<24) */
-		}
+		if (s5p_rp_is_opened)		/* Volume control */
+			s5p_rp_set_gain_apply();
+		break;
+
+	case S5P_RP_CTRL_SET_GAIN_SUB_LR:
+		s5p_rp.gain_subl = arg >> 16;
+		if (s5p_rp.gain_subl > 100)
+			s5p_rp.gain_subl = 100;
+
+		s5p_rp.gain_subr = arg & 0xFFFF;
+		if (s5p_rp.gain_subr > 100)
+			s5p_rp.gain_subr = 100;
+
+		s5pdbg("CTRL: Gain sub [L:%03ld, R:%03ld]\n",
+			s5p_rp.gain_subl, s5p_rp.gain_subr);
+		if (s5p_rp_is_opened)		/* Change gain immediately */
+			s5p_rp_set_gain_apply();
 		break;
 
 	case S5P_RP_CTRL_SET_EFFECT:					/* Test only */
