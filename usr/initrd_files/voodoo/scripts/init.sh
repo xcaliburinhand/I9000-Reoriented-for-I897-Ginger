@@ -162,12 +162,12 @@ if in_recovery; then
 
 		/voodoo/scripts/cwm_setup.sh
 		# setup the mount wrapper
-		ln -s /voodoo/scripts/mount_wrapper.sh /sbin/mount
+		#ln -s /voodoo/scripts/mount_wrapper.sh /sbin/mount
 		> /voodoo/run/cwm_enabled
 
 		log_suffix='-CWM-recovery'
 		# don't run conversion process if booting into CWM recovery
-		umount /cache
+		#umount /cache
 		letsgo
 	#else
 		# stock recovery don't handle /cache or /dbdata in Ext4
