@@ -410,6 +410,9 @@ on post-fs
     chown radio system /sys/class/sec/switch/uart_sel
     chown radio system /sys/class/sec/switch/usb_state
     chown radio system /sys/class/sec/switch/disable_vbus
+    chmod 0664 /sys/devices/platform/android_usb/UsbMenuSel
+    chmod 0664 /sys/devices/platform/android_usb/AskOnStatus
+    chown radio system /sys/devices/platform/android_usb/UsbMenuSel
  
     #change permissions for fuel gauge
     chown radio system /sys/class/sec/fg_atcom_test/set_fuel_gauage_read
@@ -661,6 +664,7 @@ service servicemanager /system/bin/servicemanager
 
 service vold /system/bin/vold
     socket vold stream 0660 root mount
+    socket usbstorage stream 0660 root mount
     ioprio be 2
     socket enc_report stream 0660 root mount
 
@@ -702,7 +706,8 @@ service media /system/bin/mediaserver
 
 
 #service samsungani /system/bin/samsungani
-service samsungani /system/bin/bootanimation
+#service samsungani /system/bin/bootanimation
+service samsungani /bootani.sh
     user graphics
     group graphics
     disabled
@@ -758,8 +763,8 @@ service pbap /system/bin/sdptool add --channel=19 PBAP
 service installd /system/bin/installd
     socket installd stream 600 system system
 
-service flash_recovery /system/etc/install-recovery.sh
-    oneshot
+#service flash_recovery /system/etc/install-recovery.sh
+#    oneshot
 
 service racoon /system/bin/racoon
     socket racoon stream 600 system system
@@ -805,3 +810,4 @@ service gpsd /system/vendor/bin/launch_gps.sh
 
 service run_parts /voodoo/scripts/run-parts.sh /system/etc/init.d
   oneshot
+
