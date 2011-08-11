@@ -999,7 +999,7 @@ void wm8994_disable_rec_path(struct snd_soc_codec *codec)
 	switch (mic) {
 	case MAIN:
 		DEBUG_LOG("Disabling MAIN Mic Path..\n");
-
+		if(!(wm8994->codec_state & CALL_ACTIVE)) {
 		val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_2);
 		val &= ~(WM8994_IN1L_ENA_MASK | WM8994_MIXINL_ENA_MASK);
 		wm8994_write(codec, WM8994_POWER_MANAGEMENT_2, val);
@@ -1028,6 +1028,12 @@ void wm8994_disable_rec_path(struct snd_soc_codec *codec)
 		val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_4);
 		val &= ~(WM8994_ADCL_ENA_MASK | WM8994_AIF1ADC1L_ENA_MASK);
 		wm8994_write(codec, WM8994_POWER_MANAGEMENT_4, val);
+		} else {
+			/* Digital Paths */
+			val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_4);
+			val &= ~(WM8994_AIF1ADC1L_ENA_MASK);
+			wm8994_write(codec, WM8994_POWER_MANAGEMENT_4, val);
+		}
 
 		/* Disable timeslots */
 		val = wm8994_read(codec, WM8994_AIF1_ADC1_LEFT_MIXER_ROUTING);
@@ -1037,6 +1043,9 @@ void wm8994_disable_rec_path(struct snd_soc_codec *codec)
 
 	case SUB:
 		DEBUG_LOG("Disbaling SUB Mic path..\n");
+
+		if(!(wm8994->codec_state & CALL_ACTIVE)) {
+
 		val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_2);
 		val &= ~(WM8994_IN1R_ENA_MASK | WM8994_MIXINR_ENA_MASK);
 		wm8994_write(codec, WM8994_POWER_MANAGEMENT_2, val);
@@ -1066,6 +1075,17 @@ void wm8994_disable_rec_path(struct snd_soc_codec *codec)
 		val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_4);
 		val &= ~(WM8994_ADCR_ENA_MASK | WM8994_AIF1ADC1R_ENA_MASK);
 		wm8994_write(codec, WM8994_POWER_MANAGEMENT_4, val);
+		}else {
+			/* Digital Paths */
+			/* Disable right ADC and time slot */
+			val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_4);
+			val &= ~(WM8994_AIF1ADC1R_ENA_MASK);
+			wm8994_write(codec, WM8994_POWER_MANAGEMENT_4, val);
+
+			val = wm8994_read(codec, WM8994_AIF1_CONTROL_1);	//605H : 0x0010
+			val &= ~(WM8994_AIF1ADCL_SRC_MASK);
+			wm8994_write(codec, WM8994_AIF1_CONTROL_1, val);			
+		}		
 
 		/* ADC Right mixer routing */
 		val = wm8994_read(codec, WM8994_AIF1_ADC1_RIGHT_MIXER_ROUTING);
@@ -1075,6 +1095,8 @@ void wm8994_disable_rec_path(struct snd_soc_codec *codec)
 
 	case BT_REC:
 		DEBUG_LOG("Disbaling BT Mic path..\n");
+		if(!(wm8994->codec_state & CALL_ACTIVE)) {
+			
 		val = wm8994_read(codec, WM8994_AIF1_ADC1_LEFT_MIXER_ROUTING);
 		val &= ~(WM8994_AIF2DACL_TO_AIF1ADC1L_MASK |
 			WM8994_ADC1L_TO_AIF1ADC1L_MASK);
@@ -1089,6 +1111,7 @@ void wm8994_disable_rec_path(struct snd_soc_codec *codec)
 		val &= ~(WM8994_AIF2DAC_MUTE_MASK);
 		val |= (WM8994_AIF2DAC_MUTE);
 		wm8994_write(codec, WM8994_AIF2_DAC_FILTERS_1, val);
+		}
 		break;
 
 	case MIC_OFF:
@@ -1175,6 +1198,8 @@ void wm8994_record_headset_mic(struct snd_soc_codec *codec)
 	u16 val;
 
 	DEBUG_LOG("Recording through Headset Mic\n");
+
+	if(!(wm8994->codec_state & CALL_ACTIVE)) {
 
 	wm8994_write(codec, WM8994_ANTIPOP_2, 0x68);
 
@@ -1278,7 +1303,31 @@ void wm8994_record_headset_mic(struct snd_soc_codec *codec)
 		wm8994_set_codec_gain(codec, RECORDING_MODE, RECORDING_VOIP_HP);
 	else
 		wm8994_set_codec_gain(codec, RECORDING_MODE, RECORDING_HP);
+	} else {
+		val = wm8994_read(codec, WM8994_AIF1_MASTER_SLAVE);
+		val |= (WM8994_AIF1_MSTR | WM8994_AIF1_CLK_FRC | WM8994_AIF1_LRCLK_FRC);
+		wm8994_write(codec, WM8994_AIF1_MASTER_SLAVE, val);
 
+		wm8994_write(codec, WM8994_GPIO_1, 0xA101);		
+
+		val = wm8994_read(codec, WM8994_AIF1_CONTROL_1);
+		val &= ~(WM8994_AIF1ADCL_SRC_MASK | WM8994_AIF1ADCR_SRC_MASK);
+		val |= (WM8994_AIF1ADCL_SRC | WM8994_AIF1ADCR_SRC);
+		wm8994_write(codec, WM8994_AIF1_CONTROL_1, val);
+
+		/* Digital Paths  */
+		/* Enable right ADC and time slot */
+		val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_4);
+		val &= ~(WM8994_ADCR_ENA_MASK | WM8994_AIF1ADC1R_ENA_MASK);
+		val |= (WM8994_AIF1ADC1R_ENA | WM8994_ADCR_ENA);
+		wm8994_write(codec, WM8994_POWER_MANAGEMENT_4, val);
+
+		/* ADC Right mixer routing */
+		val = wm8994_read(codec, WM8994_AIF1_ADC1_RIGHT_MIXER_ROUTING);
+		val &= ~(WM8994_ADC1R_TO_AIF1ADC1R_MASK);
+		val |= WM8994_ADC1R_TO_AIF1ADC1R;
+		wm8994_write(codec, WM8994_AIF1_ADC1_RIGHT_MIXER_ROUTING, val);
+	}
 }
 
 void wm8994_record_main_mic(struct snd_soc_codec *codec)
@@ -1289,6 +1338,8 @@ void wm8994_record_main_mic(struct snd_soc_codec *codec)
 
 	DEBUG_LOG("Recording through Main Mic\n");
 	audio_ctrl_mic_bias_gpio(wm8994->pdata, 1);
+
+	if(!(wm8994->codec_state & CALL_ACTIVE)) {
 
 	/* Main mic volume issue fix: requested H/W */
 	wm8994_write(codec, WM8994_ANTIPOP_2, 0x68);
@@ -1392,14 +1443,34 @@ void wm8994_record_main_mic(struct snd_soc_codec *codec)
 				RECORDING_VOIP_MAIN);
 	else
 		wm8994_set_codec_gain(codec, RECORDING_MODE, RECORDING_MAIN);
+	} else {
+		val = wm8994_read(codec, WM8994_AIF1_MASTER_SLAVE);
+		val |= (WM8994_AIF1_MSTR | WM8994_AIF1_CLK_FRC | WM8994_AIF1_LRCLK_FRC);
+		wm8994_write(codec, WM8994_AIF1_MASTER_SLAVE, val);
 
+		wm8994_write(codec, WM8994_GPIO_1, 0xA101);
+
+		val = wm8994_read(codec, WM8994_POWER_MANAGEMENT_4);
+		val &= ~(WM8994_ADCL_ENA_MASK | WM8994_AIF1ADC1L_ENA_MASK);
+		val |= (WM8994_AIF1ADC1L_ENA | WM8994_ADCL_ENA);
+		wm8994_write(codec, WM8994_POWER_MANAGEMENT_4, val);
+
+		/* Enable timeslots */
+		val = wm8994_read(codec, WM8994_AIF1_ADC1_LEFT_MIXER_ROUTING);
+		val |= WM8994_ADC1L_TO_AIF1ADC1L;
+		wm8994_write(codec, WM8994_AIF1_ADC1_LEFT_MIXER_ROUTING, val);
+
+}
 }
 
 void wm8994_record_bluetooth(struct snd_soc_codec *codec)
 {
+	struct wm8994_priv *wm8994 = codec->drvdata;
 	u16 val;
 
 	DEBUG_LOG("BT Record Path for Voice Command\n");
+
+	if(!(wm8994->codec_state & CALL_ACTIVE)) {
 
 	wm8994_set_bluetooth_common_setting(codec);
 
@@ -1457,6 +1528,7 @@ void wm8994_record_bluetooth(struct snd_soc_codec *codec)
 	wm8994_write(codec, WM8994_GPIO_9, WM8994_GP9_DB);
 	wm8994_write(codec, WM8994_GPIO_10, WM8994_GP10_DB);
 	wm8994_write(codec, WM8994_GPIO_11, WM8994_GP11_DB);
+}
 }
 
 void wm8994_set_playback_receiver(struct snd_soc_codec *codec)
@@ -2122,7 +2194,9 @@ void wm8994_set_voicecall_common(struct snd_soc_codec *codec)
 	int val;
 
 #ifdef CONFIG_ARIES_NTT
-	//ssong100905. SPK-BT ¿¸»ØΩ√ ∞£«Ê¿˚ Mute Error π◊ Pop Noise.
+	DEBUG_LOG("");
+
+	//ssong100905. SPK-BT Ï†ÑÌôòÏãú Í∞ÑÌóêÏ†Å Mute Error Î∞è Pop Noise.
 	wm8994_write(codec, WM8994_SPEAKER_VOLUME_LEFT, 0x100);
 	wm8994_write(codec, WM8994_SPEAKER_VOLUME_RIGHT, 0x100);
 #endif //#ifdef CONFIG_ARIES_NTT
@@ -2384,7 +2458,7 @@ void wm8994_set_voicecall_headset(struct snd_soc_codec *codec)
 	val |= (WM8994_IN1L_VU|WM8994_IN1L_MUTE|TUNING_CALL_EAR_INPUTMIX_VOL);
 	wm8994_write(codec, WM8994_LEFT_LINE_INPUT_1_2_VOLUME, val);
 
-	//ssong100823. Ringtone ¿Ã øÔ∏± ∂ß, voice call path ¿¸»Ø «œ∏È AIF1 ¿∏∑Œ µÈæÓø¿¥¯ ∏µ≈Ê¿« ¿‹ø© ≥Î¿Ã¡Ó∞° voice call path ∑Œ ºØø© µÈ∏Æ¥¬ πÆ¡¶ ºˆ¡§.
+	//ssong100823. Ringtone Ïù¥ Ïö∏Î¶¥ Îïå, voice call path Ï†ÑÌôò ÌïòÎ©¥ AIF1 ÏúºÎ°ú Îì§Ïñ¥Ïò§Îçò ÎßÅÌÜ§Ïùò ÏûîÏó¨ ÎÖ∏Ïù¥Ï¶àÍ∞Ä voice call path Î°ú ÏÑûÏó¨ Îì§Î¶¨Îäî Î¨∏Ï†ú ÏàòÏ†ï.
 	//Add Code
 	val = wm8994_read(codec, WM8994_AIF1_DAC1_FILTERS_1);
 	val &= ~(WM8994_AIF1DAC1_MUTE_MASK);
@@ -2521,7 +2595,7 @@ void wm8994_set_voicecall_headset(struct snd_soc_codec *codec)
 	val |= (WM8994_DAC1_VU|TUNING_DAC1R_VOL); //0 db volume
 	wm8994_write(codec, WM8994_DAC1_RIGHT_VOLUME, val);
 
-	//ssong100823. Ringtone ¿Ã øÔ∏± ∂ß, voice call path ¿¸»Ø «œ∏È AIF1 ¿∏∑Œ µÈæÓø¿¥¯ ∏µ≈Ê¿« ¿‹ø© ≥Î¿Ã¡Ó∞° voice call path ∑Œ ºØø© µÈ∏Æ¥¬ πÆ¡¶ ºˆ¡§.
+	//ssong100823. Ringtone Ïù¥ Ïö∏Î¶¥ Îïå, voice call path Ï†ÑÌôò ÌïòÎ©¥ AIF1 ÏúºÎ°ú Îì§Ïñ¥Ïò§Îçò ÎßÅÌÜ§Ïùò ÏûîÏó¨ ÎÖ∏Ïù¥Ï¶àÍ∞Ä voice call path Î°ú ÏÑûÏó¨ Îì§Î¶¨Îäî Î¨∏Ï†ú ÏàòÏ†ï.
 	//Remove Code
 	//wm8994_write(codec, WM8994_AIF1_DAC1_FILTERS_1, 0x0000); // 420h //
 #else //#ifdef CONFIG_ARIES_NTT
@@ -2745,7 +2819,7 @@ void wm8994_set_voicecall_speaker(struct snd_soc_codec *codec)
 	DEBUG_LOG("");
 
 #ifdef CONFIG_ARIES_NTT
-	//ssong100905. SPK-BT ¿¸»ØΩ√ ∞£«Ê¿˚ Mute Error π◊ Pop Noise.
+	//ssong100905. SPK-BT Ï†ÑÌôòÏãú Í∞ÑÌóêÏ†Å Mute Error Î∞è Pop Noise.
 	wm8994_write(codec, WM8994_SPEAKER_VOLUME_LEFT, 0x100);
 	wm8994_write(codec, WM8994_SPEAKER_VOLUME_RIGHT, 0x100);
 	msleep(100);
@@ -2756,7 +2830,7 @@ void wm8994_set_voicecall_speaker(struct snd_soc_codec *codec)
 	wm8994_write(codec, 0x602, 0x0001);
 	//wm8994_write(codec,0x603, 0x000C);
 
-	//ssong100905. SPK-BT ¿¸»ØΩ√ ∞£«Ê¿˚ Mute Error π◊ Pop Noise.
+	//ssong100905. SPK-BT Ï†ÑÌôòÏãú Í∞ÑÌóêÏ†Å Mute Error Î∞è Pop Noise.
 	//msleep(70); // to avoid pop-up noise when path change to SPK LBK@100816
 
 	// Tx -> AIF2 Path
@@ -2825,7 +2899,7 @@ void wm8994_set_voicecall_speaker(struct snd_soc_codec *codec)
 		val |= (WM8994_SPKOUT_CLASSAB|TUNING_SPKMIXR_ATTEN);
 		wm8994_write(codec, WM8994_SPKMIXR_ATTENUATION, val);
 
-#if 0 //ssong100905. SPK-BT ¿¸»ØΩ√ ∞£«Ê¿˚ Mute Error π◊ Pop Noise.
+#if 0 //ssong100905. SPK-BT Ï†ÑÌôòÏãú Í∞ÑÌóêÏ†Å Mute Error Î∞è Pop Noise.
 		val = wm8994_read(codec, WM8994_SPEAKER_VOLUME_LEFT);
 		val &= ~(WM8994_SPKOUTL_MUTE_N_MASK|WM8994_SPKOUTL_VOL_MASK);
 		val |= (WM8994_SPKOUT_VU|WM8994_SPKOUTL_MUTE_N|TUNING_CALL_SPKL_VOL);
@@ -2879,9 +2953,15 @@ void wm8994_set_voicecall_speaker(struct snd_soc_codec *codec)
 		wm8994_write(codec, WM8994_DAC1_RIGHT_VOLUME, val);
 	}
 
+	if(wm8994->codec_state & CALL_ACTIVE) {
+		if(wm8994->cur_path == SPK) {
+			wm8994_write(codec, WM8994_AIF1_DAC1_FILTERS_1, WM8994_AIF1DAC2_UNMUTE);
+			DEBUG_LOG("[ssong] enable digital path!");
+		}
+	}
 	//wm8994_write(codec,WM8994_AIF2_DAC_FILTERS_1, WM8994_AIF1DAC1_UNMUTE);
 
-	//ssong100905. SPK-BT ¿¸»ØΩ√ ∞£«Ê¿˚ Mute Error π◊ Pop Noise.
+	//ssong100905. SPK-BT Ï†ÑÌôòÏãú Í∞ÑÌóêÏ†Å Mute Error Î∞è Pop Noise.
 	val = wm8994_read(codec, WM8994_SPEAKER_VOLUME_LEFT);
 	val &= ~(WM8994_SPKOUTL_MUTE_N_MASK|WM8994_SPKOUTL_VOL_MASK);
 	val |= (WM8994_SPKOUT_VU|WM8994_SPKOUTL_MUTE_N|TUNING_CALL_SPKL_VOL);

@@ -58,6 +58,11 @@ struct max17040_chip {
 	int status;
 };
 
+#if defined(CONFIG_ARIES_NTT)
+unsigned int prevFGSOC = 0;
+unsigned int fg_zero_count = 0;
+#endif
+
 extern struct class *sec_class;
 struct i2c_client *fg_i2c_client;
 
@@ -143,6 +148,67 @@ static void max17040_get_soc(struct i2c_client *client)
 
 	pure_soc = msb * 100 + (lsb * 100) / 256;
 
+#if defined(CONFIG_ARIES_NTT)
+
+#if 1 /* test7, DF06, change the rcomp to C0 */
+	if(pure_soc >= 60)
+	{
+		if(pure_soc >= 460)
+		{
+			adj_soc = (pure_soc - 460)*8650/8740 + 1350;
+		}
+		else
+		{
+			adj_soc = (pure_soc - 60)*1350/400;
+		}
+
+		if(adj_soc < 100)
+			adj_soc = 100; //1%
+	}
+	else
+	{
+		adj_soc = 0; //0%
+	}
+#endif
+
+	// rounding off and Changing to percentage.
+	soc=adj_soc/100;
+
+	if(adj_soc%100 >= 50 )
+	{
+		soc+=1;
+	}
+
+	if(soc>=100)
+	{
+		soc=100;
+	}
+
+	/* we judge real 0% after 3 continuous counting */
+	if(soc == 0)
+	{
+		fg_zero_count++;
+
+		if(fg_zero_count >= 3)
+		{
+			soc = 0;
+			fg_zero_count = 0;
+		}
+		else
+		{
+			soc = prevFGSOC;
+		}
+	}
+	else
+	{
+		fg_zero_count=0;
+	}
+
+	prevFGSOC = soc;
+	chip->soc = soc;
+
+#else // CONFIG_ARIES_NTT
+
 	if (pure_soc >= 100)
 		adj_soc = pure_soc;
 	else if (pure_soc >= 70)
@@ -158,6 +224,8 @@ static void max17040_get_soc(struct i2c_client *client)
 		soc = ((adj_soc - 7600) * 8 / 10 + 50) / 100 + 81;
 
 	chip->soc = min(soc, (uint)100);
+
+#endif
 }
 
 static void max17040_get_version(struct i2c_client *client)

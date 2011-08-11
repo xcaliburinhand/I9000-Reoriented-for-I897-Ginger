@@ -28,6 +28,7 @@
 #include <linux/input.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
+#include <linux/miscdevice.h>
 #include <asm/atomic.h>
 #include "yas529.h"
 
@@ -153,7 +154,7 @@ struct geomagnetic_data {
 	struct input_dev *input_raw;
 	struct delayed_work work;
 	struct semaphore driver_lock;
-	struct semaphore multi_lock;
+	struct miscdevice geomagnetic_device;
 	atomic_t last_data[3];
 	atomic_t last_status;
 	atomic_t enable;
@@ -2204,38 +2205,6 @@ geomagnetic_driver_init(struct geomagnetic_hwdep_driver *hwdep_driver)
 	return 0;
 }
 
-
-static int
-geomagnetic_multi_lock(void)
-{
-	struct geomagnetic_data *data = NULL;
-	int rt;
-
-	if (this_client == NULL)
-		return -1;
-
-	data = i2c_get_clientdata(this_client);
-
-	rt = down_interruptible(&data->multi_lock);
-	if (rt < 0)
-		up(&data->multi_lock);
-	return rt;
-}
-
-static int
-geomagnetic_multi_unlock(void)
-{
-	struct geomagnetic_data *data = NULL;
-
-	if (this_client == NULL)
-		return -1;
-
-	data = i2c_get_clientdata(this_client);
-
-	up(&data->multi_lock);
-	return 0;
-}
-
 static int
 geomagnetic_enable(struct geomagnetic_data *data)
 {
@@ -2320,9 +2289,6 @@ geomagnetic_enable_store(struct device *dev,
 	if (hwdep_driver.set_enable == NULL)
 		return -ENOTTY;
 
-	if (geomagnetic_multi_lock() < 0)
-		return count;
-
 	if (value) {
 		hwdep_driver.set_enable(value);
 		geomagnetic_enable(data);
@@ -2330,8 +2296,6 @@ geomagnetic_enable_store(struct device *dev,
 		geomagnetic_disable(data);
 		hwdep_driver.set_enable(value);
 	}
-
-	geomagnetic_multi_unlock();
 
 	return count;
 }
@@ -2367,13 +2331,9 @@ geomagnetic_filter_enable_store(struct device *dev,
 
 	if (value != 0 && value != 1)
 		return count;
-	if (geomagnetic_multi_lock() < 0)
-		return count;
 
 	hwdep_driver.set_filter_enable(value);
 	atomic_set(&data->filter_enable, value);
-
-	geomagnetic_multi_unlock();
 
 	return count;
 }
@@ -2407,13 +2367,8 @@ geomagnetic_filter_len_store(struct device *dev,
 	if (err < 0)
 		return count;
 
-	if (geomagnetic_multi_lock() < 0)
-		return count;
-
 	hwdep_driver.set_filter_len(value);
 	atomic_set(&data->filter_len, value);
-
-	geomagnetic_multi_unlock();
 
 	return count;
 }
@@ -2424,7 +2379,7 @@ geomagnetic_position_show(struct device *dev,
 	char *buf)
 {
 	if (hwdep_driver.get_position == NULL)
-		 return -ENOTTY;
+		return -ENOTTY;
 	return sprintf(buf, "%d\n", hwdep_driver.get_position());
 }
 
@@ -2533,11 +2488,11 @@ geomagnetic_threshold_show(struct device *dev,
 	struct geomagnetic_data *data = input_get_drvdata(input_raw);
 	int threshold;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	threshold = data->threshold;
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return sprintf(buf, "%d\n", threshold);
 }
@@ -2557,14 +2512,14 @@ geomagnetic_threshold_store(struct device *dev,
 	if (err < 0)
 		return count;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	if (0 <= value && value <= 2) {
 		data->threshold = value;
 		input_report_rel(data->input_raw, REL_RAW_THRESHOLD, value);
 	}
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return count;
 }
@@ -2578,14 +2533,14 @@ geomagnetic_distortion_show(struct device *dev,
 	struct geomagnetic_data *data = input_get_drvdata(input_raw);
 	int rt;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	rt = sprintf(buf, "%d %d %d\n",
 		data->distortion[0],
 		data->distortion[1],
 		data->distortion[2]);
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return rt;
 }
@@ -2602,7 +2557,7 @@ geomagnetic_distortion_store(struct device *dev,
 	static int32_t val = 1;
 	int i;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	sscanf(buf, "%d %d %d",
 		&distortion[0],
@@ -2614,7 +2569,7 @@ geomagnetic_distortion_store(struct device *dev,
 		input_report_rel(data->input_raw, REL_RAW_DISTORTION, val++);
 	}
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return count;
 }
@@ -2628,11 +2583,11 @@ geomagnetic_shape_show(struct device *dev,
 	struct geomagnetic_data *data = input_get_drvdata(input_raw);
 	int shape;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	shape = data->shape;
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return sprintf(buf, "%d\n", shape);
 }
@@ -2652,14 +2607,14 @@ geomagnetic_shape_store(struct device *dev,
 	if (err < 0)
 		return count;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	if (0 <= value && value <= 1) {
 		data->shape = value;
 		input_report_rel(data->input_raw, REL_RAW_SHAPE, value);
 	}
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return count;
 }
@@ -2673,11 +2628,11 @@ geomagnetic_offsets_show(struct device *dev,
 	struct geomagnetic_data *data = input_get_drvdata(input_raw);
 	struct yas529_driver_state state;
 
-	geomagnetic_multi_lock();
+	lock();
 
 	state = data->driver_state;
 
-	geomagnetic_multi_unlock();
+	unlock();
 
 	return sprintf(buf, "%u %u %u %d %d %d %d\n",
 		state.rough_offset[0],
@@ -2701,8 +2656,6 @@ geomagnetic_offsets_store(struct device *dev,
 	uint32_t rough_offset[3];
 	int i;
 
-	geomagnetic_multi_lock();
-
 	sscanf(buf, "%u %u %u %d %d %d %d",
 		&rough_offset[0],
 		&rough_offset[1],
@@ -2716,8 +2669,6 @@ geomagnetic_offsets_store(struct device *dev,
 	hwdep_driver.ioctl(YAS529_IOC_SET_DRIVER_STATE,
 		(unsigned long) &state);
 	data->driver_state = state;
-
-	geomagnetic_multi_unlock();
 
 	return count;
 }
@@ -2789,9 +2740,9 @@ geomagnetic_input_work_func(struct work_struct *work)
 
 			hwdep_driver.ioctl(YAS529_IOC_GET_DRIVER_STATE,
 				(unsigned long) &state);
-			geomagnetic_multi_lock();
+			lock();
 			data->driver_state = state;
-			geomagnetic_multi_unlock();
+			unlock();
 
 			/* report event */
 			code |= (rt & YAS529_REPORT_OVERFLOW_OCCURED);
@@ -2881,6 +2832,57 @@ geomagnetic_current_time(int32_t *sec, int32_t *msec)
 	*msec = tv.tv_usec / 1000;
 }
 
+static int geomagnetic_open(struct inode *inode, struct file *file)
+{
+	struct geomagnetic_data *data = container_of(file->private_data,
+						struct geomagnetic_data,
+						geomagnetic_device);
+	file->private_data = data;
+	return 0;
+}
+
+static int geomagnetic_close(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static ssize_t geomagnetic_read(struct file *file, char __user *buffer,
+				size_t count, loff_t *ppos)
+{
+	int32_t magdata[3], raw[3];
+	uint32_t time_delay_ms = 100;
+	int accuracy, rt, on;
+
+	if (hwdep_driver.measure == NULL || hwdep_driver.ioctl == NULL) {
+		pr_err("%s:measure or ioctl is NULL\n", __func__);
+		return -EIO;
+	}
+
+	on = hwdep_driver.get_enable();
+	if (!on)
+		hwdep_driver.set_enable(1);
+
+	msleep(10);
+
+	rt = hwdep_driver.measure(magdata, raw, &accuracy, &time_delay_ms);
+	if (rt < 0) {
+		pr_err("%s: measure failed[%d]\n", __func__, rt);
+		return -EIO;
+	}
+
+	if (!on)
+		hwdep_driver.set_enable(0);
+
+	return sprintf(buffer, "%d %d %d\n", raw[0], raw[1], raw[2]);
+}
+
+static const struct file_operations geomagnetic_fops = {
+	.owner = THIS_MODULE,
+	.open = geomagnetic_open,
+	.release = geomagnetic_close,
+	.read = geomagnetic_read,
+};
+
 static int
 geomagnetic_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -2905,7 +2907,6 @@ geomagnetic_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	atomic_set(&data->last_status, 0);
 	INIT_DELAYED_WORK(&data->work, geomagnetic_input_work_func);
 	init_MUTEX(&data->driver_lock);
-	init_MUTEX(&data->multi_lock);
 
 	input_data = input_allocate_device();
 	if (input_data == NULL) {
@@ -3022,6 +3023,17 @@ geomagnetic_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	/* enabling filter */
 	hwdep_driver.set_filter_enable(1);
 	atomic_set(&data->filter_enable, 1);
+
+	data->geomagnetic_device.minor = MISC_DYNAMIC_MINOR;
+	data->geomagnetic_device.name = "yamaha_compass";
+	data->geomagnetic_device.fops = &geomagnetic_fops;
+
+	rt = misc_register(&data->geomagnetic_device);
+	if (rt) {
+		pr_err("%s: misc_register failed\n", __FILE__);
+		goto err;
+	}
+
 
 	YLOGD("return 0\n");
 	return 0;

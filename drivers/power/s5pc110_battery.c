@@ -236,6 +236,18 @@ static int max8998_charging_control(struct chg_data *chg)
 		/* enable charging */
 		if (chg->cable_status == CABLE_TYPE_AC) {
 			/* ac */
+#if defined(CONFIG_ARIES_NTT)
+			if (chg->set_batt_full)
+				ret = max8998_write_reg(i2c, MAX8998_REG_CHGR1,
+					(MAX8998_TOPOFF_10	<< MAX8998_SHIFT_TOPOFF) |
+					(MAX8998_RSTR_DISABLE	<< MAX8998_SHIFT_RSTR) |
+					(MAX8998_ICHG_700	<< MAX8998_SHIFT_ICHG));
+			else
+				ret = max8998_write_reg(i2c, MAX8998_REG_CHGR1,
+					(MAX8998_TOPOFF_15	<< MAX8998_SHIFT_TOPOFF) |
+					(MAX8998_RSTR_DISABLE	<< MAX8998_SHIFT_RSTR) |
+					(MAX8998_ICHG_700	<< MAX8998_SHIFT_ICHG));
+#else
 			if (chg->set_batt_full)
 				ret = max8998_write_reg(i2c, MAX8998_REG_CHGR1,
 					(MAX8998_TOPOFF_10	<< MAX8998_SHIFT_TOPOFF) |
@@ -246,6 +258,7 @@ static int max8998_charging_control(struct chg_data *chg)
 					(MAX8998_TOPOFF_20	<< MAX8998_SHIFT_TOPOFF) |
 					(MAX8998_RSTR_DISABLE	<< MAX8998_SHIFT_RSTR) |
 					(MAX8998_ICHG_600	<< MAX8998_SHIFT_ICHG));
+#endif
 			if (ret < 0)
 				goto err;
 
@@ -905,10 +918,17 @@ static irqreturn_t max8998_int_work_func(int irq, void *max8998_chg)
 			chg->set_batt_full = true;
 
 			if (chg->cable_status == CABLE_TYPE_AC)
+#if defined(CONFIG_ARIES_NTT)
+				max8998_write_reg(i2c, MAX8998_REG_CHGR1,
+					(MAX8998_TOPOFF_10	<< MAX8998_SHIFT_TOPOFF) |
+					(MAX8998_RSTR_DISABLE	<< MAX8998_SHIFT_RSTR) |
+					(MAX8998_ICHG_700	<< MAX8998_SHIFT_ICHG));
+#else
 				max8998_write_reg(i2c, MAX8998_REG_CHGR1,
 					(MAX8998_TOPOFF_10	<< MAX8998_SHIFT_TOPOFF) |
 					(MAX8998_RSTR_DISABLE	<< MAX8998_SHIFT_RSTR) |
 					(MAX8998_ICHG_600	<< MAX8998_SHIFT_ICHG));
+#endif
 			else if (chg->cable_status == CABLE_TYPE_USB)
 				max8998_write_reg(i2c, MAX8998_REG_CHGR1,
 					(MAX8998_TOPOFF_25	<< MAX8998_SHIFT_TOPOFF) |

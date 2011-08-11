@@ -3170,7 +3170,7 @@ static void qt602240_late_resume(struct early_suspend *h)
     gpio_set_value(GPIO_TOUCH_EN, 1);
     msleep(70);
     s3c_gpio_cfgpin(GPIO_TOUCH_INT, S3C_GPIO_SFN(0xf));
-    s3c_gpio_setpull(GPIO_TOUCH_INT, S3C_GPIO_PULL_NONE);
+    s3c_gpio_setpull(GPIO_TOUCH_INT, S3C_GPIO_PULL_UP);
 
     if ( (ret = write_power_config(power_config)) != CFG_WRITE_OK) {
         /* "Power config write failed!\n" */
@@ -4794,6 +4794,9 @@ int __init qt602240_init(void)
     gpio_set_value(GPIO_TOUCH_EN, 1);
     msleep(70);
 
+	int tint = GPIO_TOUCH_INT;
+	s3c_gpio_cfgpin(tint, S3C_GPIO_INPUT);
+	s3c_gpio_setpull(tint, S3C_GPIO_PULL_UP);
     qt602240 = kzalloc(sizeof(struct qt602240_data), GFP_KERNEL);
     if (qt602240 == NULL) {
         return -ENOMEM;

@@ -53,7 +53,7 @@
 #define gp2a_dbgmsg(str, args...) pr_debug("%s: " str, __func__, ##args)
 
 
-#define ADC_BUFFER_NUM	6
+#define LIGHT_BUFFER_NUM	10
 
 /* ADDSEL is LOW */
 #define REGS_PROX		0x0 /* Read  Only */
@@ -75,11 +75,20 @@ static u8 reg_defaults[5] = {
 	0x01, /* OPMOD: normal operating mode */
 };
 
-struct gp2a_data;
-
 enum {
 	LIGHT_ENABLED = BIT(0),
 	PROXIMITY_ENABLED = BIT(1),
+};
+
+static const int adc_table[9] = {
+	250,
+	400,
+	600,
+	800,
+	1200,
+	1800,
+	1900,
+	2100,
 };
 
 /* driver data */
@@ -94,8 +103,9 @@ struct gp2a_data {
 	struct work_struct work_light;
 	struct hrtimer timer;
 	ktime_t light_poll_delay;
-	int adc_value_buf[ADC_BUFFER_NUM];
 	int adc_index_count;
+	int light_buffer;
+	int light_count;
 	bool adc_buf_initialized;
 	bool on;
 	u8 power_state;
@@ -137,6 +147,8 @@ static void gp2a_light_enable(struct gp2a_data *gp2a)
 {
 	gp2a_dbgmsg("starting poll timer, delay %lldns\n",
 		    ktime_to_ns(gp2a->light_poll_delay));
+	gp2a->light_buffer = 0;
+	gp2a->light_count = 0;
 	hrtimer_start(&gp2a->timer, gp2a->light_poll_delay, HRTIMER_MODE_REL);
 }
 
@@ -305,55 +317,34 @@ static struct attribute_group proximity_attribute_group = {
 
 static int lightsensor_get_adcvalue(struct gp2a_data *gp2a)
 {
-	int i = 0;
-	int j = 0;
-	unsigned int adc_total = 0;
-	int adc_avr_value;
-	unsigned int adc_index = 0;
-	unsigned int adc_max = 0;
-	unsigned int adc_min = 0;
-	int value = 0;
-
 	/* get ADC */
-	value = gp2a->pdata->light_adc_value();
-
-	adc_index = (gp2a->adc_index_count++) % ADC_BUFFER_NUM;
-
-	/*ADC buffer initialize (light sensor off ---> light sensor on) */
-	if (!gp2a->adc_buf_initialized) {
-		gp2a->adc_buf_initialized = true;
-		for (j = 0; j < ADC_BUFFER_NUM; j++)
-			gp2a->adc_value_buf[j] = value;
-	} else
-		gp2a->adc_value_buf[adc_index] = value;
-
-	adc_max = gp2a->adc_value_buf[0];
-	adc_min = gp2a->adc_value_buf[0];
-
-	for (i = 0; i < ADC_BUFFER_NUM; i++) {
-		adc_total += gp2a->adc_value_buf[i];
-
-		if (adc_max < gp2a->adc_value_buf[i])
-			adc_max = gp2a->adc_value_buf[i];
-
-		if (adc_min > gp2a->adc_value_buf[i])
-			adc_min = gp2a->adc_value_buf[i];
-	}
-	adc_avr_value = (adc_total-(adc_max+adc_min))/(ADC_BUFFER_NUM-2);
-
-	if (gp2a->adc_index_count == ADC_BUFFER_NUM-1)
-		gp2a->adc_index_count = 0;
-
-	return adc_avr_value;
+	return gp2a->pdata->light_adc_value();
 }
 
 static void gp2a_work_func_light(struct work_struct *work)
 {
+	int i;
+	int adc;
 	struct gp2a_data *gp2a = container_of(work, struct gp2a_data,
 					      work_light);
-	int adc = lightsensor_get_adcvalue(gp2a);
-	input_report_abs(gp2a->light_input_dev, ABS_MISC, adc);
-	input_sync(gp2a->light_input_dev);
+
+	adc = lightsensor_get_adcvalue(gp2a);
+
+	for (i = 0; ARRAY_SIZE(adc_table); i++)
+		if (adc <= adc_table[i])
+			break;
+
+	if (gp2a->light_buffer == i) {
+		if (gp2a->light_count++ == LIGHT_BUFFER_NUM) {
+			input_report_abs(gp2a->light_input_dev,
+							ABS_MISC, adc);
+			input_sync(gp2a->light_input_dev);
+			gp2a->light_count = 0;
+		}
+	} else {
+		gp2a->light_buffer = i;
+		gp2a->light_count = 0;
+	}
 }
 
 /* This function is for light sensor.  It operates every a few seconds.
