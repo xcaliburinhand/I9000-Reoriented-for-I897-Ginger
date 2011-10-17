@@ -1199,8 +1199,13 @@ static void touch_keypad_onoff(int onoff)
 static const int touch_keypad_code[] = {
 #if defined(CONFIG_GALAXY_I897) || defined(CONFIG_GALAXY_T959)
 	KEY_MENU,
+#if defined(CONFIG_GALAXY_T959)
+	KEY_BACK,
+	KEY_HOME,
+#else
 	KEY_HOME,
 	KEY_BACK,
+#endif
 	KEY_SEARCH,
 #else
 	KEY_MENU,
