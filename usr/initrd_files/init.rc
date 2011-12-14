@@ -810,14 +810,6 @@ service gpsd /system/vendor/bin/launch_gps.sh
     user gps
     group system inet
 
-on property:xcal.samsung.vibrant=1
-    stop gpsd
-
-service agpsd /system/bin/agpsd
-     user system
-     group system inet
-     oneshot
-
 service run_parts /voodoo/scripts/run-parts.sh /system/etc/init.d
   oneshot
 
