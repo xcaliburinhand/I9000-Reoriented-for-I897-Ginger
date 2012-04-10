@@ -174,13 +174,13 @@ on fs
     chmod 0771 /dbdata
     mkdir /dbdata/databases
     chown system system /dbdata/databases
-    chmod 0777 /dbdata/databases
+    chmod 0775 /dbdata/databases
     mkdir /dbdata/system
     chown system system /dbdata/system
     chmod 0775 /dbdata/system
-    mkdir /dbdata/db-journal
-    chown system system /dbdata/db-journal
-    chmod 0777 /dbdata/db-journal
+#    mkdir /dbdata/db-journal
+#    chown system system /dbdata/db-journal
+#    chmod 0777 /dbdata/db-journal
     mount rfs /dev/block/stl11 /cache nosuid nodev check=no
 
     mkdir /mnt/.lfs 0755 root root
@@ -251,15 +251,17 @@ on post-fs
     mkdir /data/misc/vpn 0770 system system
     mkdir /data/misc/systemkeys 0700 system system
     mkdir /data/misc/vpn/profiles 0770 system system
-    mkdir /data/misc/radio 0771 radio radio
+    mkdir /data/misc/radio 0775 radio radio
     # give system access to wpa_supplicant.conf for backup and restore
     mkdir /data/wifi 0777 wifi wifi
 #    mkdir /data/misc/wifi 0771 wifi system
     mkdir /data/misc/wifi 0770 wifi system
-    chmod 0777 /data/misc/wifi/
-    chmod 0777 /data/wifi/
-    mkdir /data/misc/dhcp 0777 dhcp dhcp
-    mkdir /data/misc/wifi/sockets 0777 wifi wifi
+    chmod 0771 /data/misc/wifi/
+    chmod 0771 /data/wifi/
+    mkdir /data/misc/dhcp 0771 dhcp dhcp
+    mkdir /data/misc/wifi/sockets 0771 wifi wifi
+    chmod 0771 /data/misc/dhcp
+    chmod 0771 /data/misc/wifi/sockets
     chmod 0664 /system/etc/wifi/wpa_supplicant.conf
     chown dhcp dhcp /data/misc/dhcp
     mkdir /data/misc/dhcpcd 0771 dhcp dhcp 
@@ -277,10 +279,11 @@ on post-fs
     chown system system /data/app   
 
     # create log system
-    mkdir /data/log 0777 system system
+    mkdir /data/log 0775 system log
+    chown system log /data/log
 
-    chmod 0777 /data/log
-    chmod 0777 /data/anr
+    chmod 0775 /data/log
+    chmod 0775 /data/anr
     
     chmod 0662 /dev/log/radio
     chmod 0662 /dev/log/main
@@ -332,6 +335,15 @@ on post-fs
     chown gps system /data/gps
     chown gps root /sys/class/sec/gps/GPS_PWR_EN/value
     chmod 660 /sys/class/sec/gps/GPS_PWR_EN/value
+
+    chown root system /dev/s3c2410_serial1
+    chmod 660 /dev/s3c2410_serial1
+    chown system system /data/gps
+    chown root system /sys/class/gpio/gpio121/value
+    chmod 664 /sys/class/gpio/gpio121/value
+    chown root system /sys/class/gpio/gpio120/value
+    chmod 664 /sys/class/gpio/gpio120/value
+
 
 # for sensor control
     chown system input /sys/class/input/input0/enable
