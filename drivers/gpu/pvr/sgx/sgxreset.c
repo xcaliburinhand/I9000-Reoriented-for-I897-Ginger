@@ -199,9 +199,8 @@ static IMG_VOID SGXResetInvalDC(PVRSRV_SGXDEV_INFO	*psDevInfo,
 		if (PollForValueKM((IMG_UINT32 *)((IMG_UINT8*)psDevInfo->pvRegsBaseKM + EUR_CR_BIF_MEM_REQ_STAT),
 							0,
 							EUR_CR_BIF_MEM_REQ_STAT_READS_MASK,
-							MAX_HW_TIME_US,
 							MAX_HW_TIME_US/WAIT_TRY_COUNT,
-							IMG_FALSE) != PVRSRV_OK)
+							WAIT_TRY_COUNT) != PVRSRV_OK)
 		{
 			PVR_DPF((PVR_DBG_ERROR,"Wait for DC invalidate failed."));
 			PVR_DBG_BREAK;

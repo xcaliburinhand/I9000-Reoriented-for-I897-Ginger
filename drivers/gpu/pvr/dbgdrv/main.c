@@ -116,7 +116,7 @@ IMG_VOID DBGDrvGetServiceTable(IMG_VOID **fn_table)
 #if defined(SUPPORT_DRI_DRM)
 void dbgdrv_cleanup(void)
 #else
-static void __exit dbgdrv_cleanup(void)
+void cleanup_module(void)
 #endif
 {
 #if !defined(SUPPORT_DRI_DRM)
@@ -136,7 +136,7 @@ static void __exit dbgdrv_cleanup(void)
 #if defined(SUPPORT_DRI_DRM)
 IMG_INT dbgdrv_init(void)
 #else
-static int __init dbgdrv_init(void)
+int init_module(void)
 #endif
 {
 #if (defined(LDM_PLATFORM) || defined(LDM_PCI)) && !defined(SUPPORT_DRI_DRM)
@@ -309,8 +309,3 @@ IMG_VOID DefineHotKey (IMG_UINT32 ui32ScanCode, IMG_UINT32 ui32ShiftState, PHOTK
 }
 
 EXPORT_SYMBOL(DBGDrvGetServiceTable);
-
-#if !defined(SUPPORT_DRI_DRM)
-subsys_initcall(dbgdrv_init);
-module_exit(dbgdrv_cleanup);
-#endif

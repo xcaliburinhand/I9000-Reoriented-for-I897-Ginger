@@ -389,9 +389,8 @@ PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO	*psDevInfo,
 	if (PollForValueKM(&psSGXHostCtl->ui32InitStatus,
 					   PVRSRV_USSE_EDM_INIT_COMPLETE,
 					   PVRSRV_USSE_EDM_INIT_COMPLETE,
-					   MAX_HW_TIME_US,
 					   MAX_HW_TIME_US/WAIT_TRY_COUNT,
-					   IMG_FALSE) != PVRSRV_OK)
+					   WAIT_TRY_COUNT) != PVRSRV_OK)
 	{
 		PVR_DPF((PVR_DBG_ERROR, "SGXInitialise: Wait for uKernel initialisation failed"));
 		#if !defined(FIX_HW_BRN_23281)

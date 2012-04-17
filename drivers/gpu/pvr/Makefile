@@ -42,7 +42,8 @@ ccflags-y += \
 	-DPVR_BUILD_DATE="" \
 	-DPVRSRV_MODNAME="\"pvrsrvkm\"" \
 	-Idrivers/gpu/pvr/sgx \
- 	-DPVRSRV_RESET_ON_HWTIMEOUT
+ 	-DPVRSRV_RESET_ON_HWTIMEOUT \
+ 	-DPVRSRV_DEBUG_OS_MEMORY
 
 ccflags-$(CONFIG_PVR_BUILD_RELEASE) += \
 	-DPVR_BUILD_TYPE="\"release\"" -DRELEASE
@@ -109,7 +110,8 @@ pvrsrvkm-y := \
 	sgx/sgxkick.o \
 	sgx/sgxtransfer.o \
 	sgx/mmu.o \
-	sgx/pb.o
+	sgx/pb.o \
+	mem_debug.o
 
 ccflags-$(CONFIG_ARCH_S5PV210) += \
 	-DPVR_BUILD_DIR="\"smdkc110_android\"" \
@@ -129,8 +131,13 @@ s3c_lcd-y := \
 	s3c_lcd/s3c_displayclass.o \
 	s3c_lcd/s3c_lcd.o
 
+s3c_bc-y := \
+	s3c_bc/s3c_bc.o \
+	s3c_bc/s3c_bc_linux.o
+
 obj-$(CONFIG_PVR_PDUMP) += dbgdrv
 
 obj-$(CONFIG_PVR_SGX) += pvrsrvkm.o
 
 obj-$(CONFIG_ARCH_S5PV210) += s3c_lcd.o
+obj-$(CONFIG_ARCH_S5PV210) += s3c_bc.o
